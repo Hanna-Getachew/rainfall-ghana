@@ -68,28 +68,6 @@ The `rainfall_workflow.Rmd` file provides a structured explanation of the entire
 - Explanations of the methods used for data processing and analysis.
 - Code snippets and outputs to illustrate key steps.
 
-## Uploading Data to GitHub
-To upload the dataset to GitHub:
-1. Move to your local repository directory.
-```bash
-cd /path/to/your/repository
-```
-2. Copy the CSV file into the repository folder.
-```bash
-cp /path/to/Rainfall_Ghana_All_2023_2024.csv .
-```
-3. Add the file to Git.
-```bash
-git add Rainfall_Ghana_All_2023_2024.csv
-```
-4. Commit the changes.
-```bash
-git commit -m "Added rainfall dataset for Ghana (2023-2024)"
-```
-5. Push to GitHub.
-```bash
-git push origin main
-```
 
 ## Future Work
 - Integrate temperature data for climate impact analysis.
@@ -99,6 +77,6 @@ git push origin main
 ## Contact
 For questions or contributions, please open an issue or submit a pull request.
 
-Author: [Your Name]  
-Email: your.email@example.com
+Author:Hanna
+Email: hfgedu@gmail.com
 
