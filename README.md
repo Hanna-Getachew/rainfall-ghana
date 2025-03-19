@@ -1,15 +1,25 @@
 # rainfall-ghana
 Daily rainfall data for 2023 and 2024 in Ghana, extracted from Google Earth Engine (CHIRPS dataset).
+
 # Rainfall Data for Ghana (2023-2024)
 
 ## Overview
 This repository contains daily rainfall data for all of Ghana for the years 2023 and 2024. The data is extracted using Google Earth Engine (GEE) from the CHIRPS Daily Precipitation dataset. This repository also includes scripts and documentation to process, analyze, and visualize the data.
+
+Additionally, we are obtaining rainfall and temperature data for **survey clusters in northern Ghana**. These clusters correspond to **200 villages and 3,000 households**, where data collection occurred in **late 2023**, and a second wave is taking place shortly. During the 2024 growing season, **prolonged dry spells led to significant harvest losses**, making it necessary to proxy drought severity using various indices.
 
 ## Data Source
 - **Dataset:** CHIRPS Daily Precipitation ([UCSB-CHG/CHIRPS/DAILY](https://developers.google.com/earth-engine/datasets/catalog/UCSB-CHG_CHIRPS_DAILY))
 - **Resolution:** ~5.5 km grid
 - **Time Period:** January 1, 2023 – December 31, 2024
 - **Region:** Ghana (national coverage)
+
+## Drought Indices
+The study focuses on **measuring drought severity in 2024** using multiple indices, including:
+- **Consecutive Dry Days (CDD)** – Number of consecutive days with precipitation below a threshold.
+- **Rainfall Anomaly Index (RAI)** – Measures deviations from normal rainfall.
+- **Standardized Precipitation Index (SPI)** – Quantifies rainfall deficits based on long-term distribution.
+- **Standardized Precipitation Evapotranspiration Index (SPEI)** – Accounts for both precipitation and potential evapotranspiration.
 
 ## Repository Structure
 ```
@@ -47,7 +57,7 @@ Once the data is extracted, it is processed in R using `rainfall_analysis.R`. Th
 ```r
 library(readr)
 
-rainfall_data <- read_csv("https://raw.githubusercontent.com/yourusername/Rainfall_Ghana/main/Rainfall_Ghana_All_2023_2024.csv")
+rainfall_data <- read_csv("https://raw.githubusercontent.com/hannagetachew/Rainfall_Ghana/main/Rainfall_Ghana_All_2023_2024.csv")
 head(rainfall_data)
 ```
 
@@ -68,15 +78,14 @@ The `rainfall_workflow.Rmd` file provides a structured explanation of the entire
 - Explanations of the methods used for data processing and analysis.
 - Code snippets and outputs to illustrate key steps.
 
-
 ## Future Work
 - Integrate temperature data for climate impact analysis.
-- Calculate additional drought indices such as the Standardized Precipitation Index (SPI).
+- Calculate additional drought indices such as the **Rainfall Anomaly Index (RAI)** and **Standardized Precipitation Evapotranspiration Index (SPEI)**.
 - Compare rainfall patterns with agricultural productivity data.
 
 ## Contact
 For questions or contributions, please open an issue or submit a pull request.
 
-Author:Hanna
+Author: Hanna  
 Email: hfgedu@gmail.com
 
