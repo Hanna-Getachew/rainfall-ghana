@@ -1,0 +1,226 @@
+---
+title: "Ghana Rainfall Data Extraction and Analysis Workflow"
+author: "Hanna"
+date: "2025-03-19"
+output: html_document
+---
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+
+This document provides a step-by-step workflow for extracting daily rainfall data from Google Earth Engine (GEE), processing it in R, and conducting exploratory data analysis. The data covers Ghana for the years 2023 and 2024, using the CHIRPS Daily Precipitation dataset.
+
+# Extracting Data with Google Earth Engine
+
+To extract the data, use the following Google Earth Engine (GEE) script in JavaScript:
+
+```javascript
+// Define Ghana boundary using the USDOS LSIB dataset
+var ghana = ee.FeatureCollection("USDOS/LSIB_SIMPLE/2017")
+  .filter(ee.Filter.eq("country_na", "Ghana"));
+
+// Define time periods
+var startDate2023 = '2023-01-01';
+var endDate2023 = '2023-12-31';
+var startDate2024 = '2024-01-01';
+var endDate2024 = '2024-12-31';
+
+// Load CHIRPS Daily Precipitation dataset for both years
+var dataset2023 = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY')
+  .filterDate(startDate2023, endDate2023)
+  .select('precipitation')
+  .map(function(img) { return img.unmask(0); }); // Fill missing values
+
+var dataset2024 = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY')
+  .filterDate(startDate2024, endDate2024)
+  .select('precipitation')
+  .map(function(img) { return img.unmask(0); });
+
+// Function to extract mean rainfall over Ghana for each day
+var extractRainfall = function(image) {
+  var meanRainfall = image.reduceRegion({
+    reducer: ee.Reducer.mean(),
+    geometry: ghana.geometry(),  // Ensure correct boundary usage
+    scale: 5000,
+    maxPixels: 1e13
+  }).get('precipitation');
+
+  return ee.Feature(null, {
+    'date': image.date().format('YYYY-MM-dd'),
+    'rainfall': meanRainfall
+  });
+};
+
+// Apply function over image collections
+var results2023 = dataset2023.map(extractRainfall);
+var results2024 = dataset2024.map(extractRainfall);
+
+// Merge results
+var allResults = results2023.merge(results2024);
+
+// Export results to Google Drive
+Export.table.toDrive({
+  collection: allResults,
+  description: 'Rainfall_Ghana_All_2023_2024',
+  fileFormat: 'CSV'
+});
+
+// Display first image for validation
+Map.centerObject(ghana, 6);
+Map.addLayer(dataset2023.first(), {min: 0, max: 20, palette: ['blue', 'yellow', 'red']}, 'Rainfall 2023 Sample');
+```
+
+# Loading and Processing Data in R
+
+Once the data is extracted from GEE, follow these steps to process and analyze it in R.
+
+## Load Required Libraries
+
+```{r setup, message=FALSE, warning=FALSE}
+library(readr)
+library(dplyr)
+library(ggplot2)
+```
+
+## Load and Inspect Data
+
+```{r load_data}
+# Load rainfall dataset
+rainfall_data <- read_csv("Rainfall_Ghana_All_2023_2024.csv")
+
+#structure of dataset
+str(rainfall_data)
+head(rainfall_data)
+dim(rainfall_data)
+```
+
+```stata
+import delimited "Rainfall_Ghana_All_2023_2024.csv", clear
+describe
+list in 1/5
+count
+```
+
+## Summary Statistics
+
+```{r summary_stats}
+summary(rainfall_data$rainfall)
+```
+
+```stata
+summarize rainfall
+```
+
+
+## Visualizing Rainfall Trends
+
+```{r rainfall_trend, fig.width=8, fig.height=5}
+# Convert date column to Date format
+rainfall_data <- rainfall_data %>%
+  mutate(date = as.Date(date))
+
+# Plot rainfall trend
+ggplot(rainfall_data, aes(x = date, y = rainfall)) +
+  geom_line(color = "blue") +
+  labs(title = "Daily Rainfall in Ghana (2023-2024)", x = "Date", y = "Rainfall (mm)")
+```
+
+
+```stata
+gen date2 = date(date, "YMD")
+format date2 %td
+drop date
+rename date2 date
+```
+
+
+```{r cars}
+summary(rainfall_data)
+head(rainfall_data)
+```
+
+## Identifying Consecutive Dry Days (CDD)
+
+```{r cdd_calculation}
+rainfall_data <- rainfall_data %>%
+  arrange(date) %>% #sorts the data by date
+  mutate(dry_day = ifelse(rainfall < 1, 1, 0), 
+         CDD = sequence(rle(dry_day)$lengths) * dry_day)
+#creates a dry_day column:1 if rainfall < 1mm (dry day), 0 if rainfall ≥ 1mm (wet day).
+#counts consecutive dry days (CDD): rle() (Run-Length Encoding) to detect consecutive dry days.
+
+# View distribution of CDD
+summary(rainfall_data$CDD)
+```
+
+
+```stata
+twoway (line rainfall date), ///
+    title("Daily Rainfall in Ghana (2023-2024)") ///
+    xlabel(, angle(45)) ///
+    ylabel(, grid) ///
+    xtitle("Date") ytitle("Rainfall (mm)")
+```
+
+
+
+```{r rainfall anomaly index (RAI)}
+rainfall_data <- rainfall_data %>%
+  mutate(rai = (rainfall - mean(rainfall, na.rm = TRUE)) / sd(rainfall, na.rm = TRUE))
+```
+
+```{r standardized precipitation index (SPI)}
+#install.packages("SPEI")
+#install.packages("lubridate")
+library(SPEI)
+library(dplyr)
+library(lubridate)
+
+# Aggregate daily rainfall to monthly totals
+rainfall_monthly <- rainfall_data %>%
+  mutate(year_month = floor_date(date, "month")) %>%
+  group_by(year_month) %>%
+  summarise(monthly_rainfall = sum(rainfall, na.rm = TRUE))
+
+# Compute 3-month SPEI
+spei_3_month <- spei(rainfall_monthly$monthly_rainfall, scale = 3)
+
+# Add SPEI values to dataset
+rainfall_monthly$SPEI <- spei_3_month$fitted
+
+# View results
+head(rainfall_monthly)
+```
+
+```stata
+gen dry_day = (rainfall < 1)
+
+gen CDD = .
+replace CDD = 1 if dry_day == 1 & dry_day[_n-1] == 0
+replace CDD = CDD[_n-1] + 1 if dry_day == 1 & dry_day[_n-1] > 0
+replace CDD = 0 if dry_day == 0
+
+summarize CDD
+```
+
+```stata
+histogram CDD, ///
+    title("Distribution of Consecutive Dry Days (CDD)") ///
+    xlabel(0(5)30) ///
+    ylabel(, grid) ///
+    xtitle("Consecutive Dry Days") ytitle("Frequency") ///
+    color(blue)
+```
+
+```{r save processed data}
+#install.packages("readr")
+library(readr)
+write_csv(rainfall_data, "Processed_Rainfall_Ghana_2023_2024.csv")
+head(rainfall_data)
+```
+
